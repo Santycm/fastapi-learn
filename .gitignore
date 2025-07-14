@@ -28,3 +28,18 @@ env.bak/
 venv.bak/
 .DS_Store
 .vscode/
+
+# IDE adicionales
+.idea/
+*.swp
+*.swo
+
+# OS adicionales
+Thumbs.db
+
+# Dataset files (se generarán automáticamente)
+dataset_50000.json
+sample_dataset.json
+
+# Logs
+*.log
