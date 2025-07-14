@@ -4,6 +4,7 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from enum import Enum
 from typing import Annotated
+from dataset_manager import get_dataset_file
 
 app = FastAPI(
     title="FastAPI Items API",
@@ -12,7 +13,7 @@ app = FastAPI(
 )
 
 # Configuración del archivo de dataset
-DATASET_FILE = os.getenv("DATASET_FILE", "dataset_50000.json")
+DATASET_FILE = get_dataset_file()
 
 @app.get("/")
 async def root():
