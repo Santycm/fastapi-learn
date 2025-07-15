@@ -1,6 +1,5 @@
 import json
-import os
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Path
 from pydantic import BaseModel
 from enum import Enum
 from typing import Annotated
@@ -37,7 +36,7 @@ async def get_items(skip: int = 0, limit: int = 1000):
     
 
 @app.get("/items/{item_id}")
-async def get_item_by_id(item_id: int):
+async def get_item_by_id(item_id: Annotated[int, Path(title="ID del item", ge=1)]):
     """
     Endpoint para obtener un item específico por su ID.
     """
@@ -52,7 +51,7 @@ async def get_item_by_id(item_id: int):
         return {"error": "Dataset not found."}
 
 @app.get("/items/search/")
-async def search_items(q: Annotated[str | None, Query(max_length=5)] = None):
+async def search_items(q: Annotated[str | None, Query(max_length=5, pattern="^[a-zA-Z0-9]*$")] = None):
     """
     Endpoint para buscar items por una consulta específica.
     """
@@ -64,6 +63,60 @@ async def search_items(q: Annotated[str | None, Query(max_length=5)] = None):
     except FileNotFoundError:
         return {"error": "Dataset not found."}
     
+@app.get("/items/categories/")
+async def get_categories(q: Annotated[list[str], Query(alias="item-category")]= ["Electronics", "Home", "Food", "Toys", "Tools"]):
+    """
+    Endpoint para traer elementos por categorias
+    """
+
+    try:
+        with open(DATASET_FILE, "r") as file:
+            items = json.load(file)
+        items = [{"name": item['name'], "category": item['category']} for item in items if item['category'] in q]
+        return {"items": list(items)}
+    except FileNotFoundError:
+        return {"error": "Dataset not found."}
+
+class FilterParams(BaseModel):
+    model_config = {"extra": "forbid"}
+    category: str | None = None
+    brand: str | None = None
+    min_price: float | None = None
+    max_price: float | None = None
+    in_stock: bool | None = None
+
+
+@app.get("/get-items/")
+async def get_items(filter:Annotated[FilterParams, Query()]):
+    """
+    Endpoint para obtener items filtrados por categoría, marca, precio y disponibilidad.
+    """
+    try:
+        with open(DATASET_FILE, "r") as file:
+            items = json.load(file)
+        
+        filtered_items = items
+        
+        if filter.category:
+            filtered_items = [item for item in filtered_items if item['category'] == filter.category]
+        
+        if filter.brand:
+            filtered_items = [item for item in filtered_items if item['brand'] == filter.brand]
+        
+        if filter.min_price is not None:
+            filtered_items = [item for item in filtered_items if item['price'] >= filter.min_price]
+        
+        if filter.max_price is not None:
+            filtered_items = [item for item in filtered_items if item['price'] <= filter.max_price]
+        
+        if filter.in_stock is not None:
+            filtered_items = [item for item in filtered_items if item['in_stock'] == filter.in_stock]
+        
+        return {"items": filtered_items}
+    
+    except FileNotFoundError:
+        return {"error": "Dataset not found."}
+
 
 class Item(BaseModel):
     name: str
